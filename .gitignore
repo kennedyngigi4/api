@@ -1,0 +1,12 @@
+
+# files
+.env
+
+
+# folders
+env/
+media/
+superadmin/
+website/
+
+
