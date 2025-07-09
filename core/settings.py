@@ -18,7 +18,11 @@ SECRET_KEY=os.getenv("SECRET_KEY")
 DEBUG=os.getenv("DEBUG")
 
 ALLOWED_HOSTS = [
-    'api.kenautos.co.ke', 'www.api.kenautos.co.ke', 'https://api.kenautos.co.ke'
+    'api.kenautos.co.ke', 'localhost', '127.0.0.1', 'kenautos.co.ke'
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://api.kenautos.co.ke",
 ]
 
 CORS_ALLOWED_ORIGINS = [
