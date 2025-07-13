@@ -46,7 +46,7 @@ class PriceHistorySerializer(serializers.ModelSerializer):
 
 
 class ListingSerializer(serializers.ModelSerializer):
-    images = ListingImageSerializer(many=True, required=False)
+    images = ListingImageSerializer(many=True, required=False, read_only=True)
     make = serializers.SerializerMethodField()
     model = serializers.SerializerMethodField()
     dealer = serializers.SerializerMethodField()
@@ -159,7 +159,7 @@ class PartImageSerializer(serializers.ModelSerializer):
 
 
 class SparePartSerializer(serializers.ModelSerializer):
-    images = PartImageSerializer(many=True, required=False)
+    images = PartImageSerializer(many=True, required=False, read_only=True)
     make = serializers.SerializerMethodField()
     model = serializers.SerializerMethodField()
     dealer = serializers.SerializerMethodField()

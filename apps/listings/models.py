@@ -172,19 +172,19 @@ class SparePart(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
-    title = models.CharField(max_length=255)
-    vehicle_type = models.CharField(max_length=30, null=True, choices=VEHICLE_TYPE_CHOICES, blank=True)
+    title = models.TextField()
+    vehicle_type = models.CharField(max_length=255, null=True, choices=VEHICLE_TYPE_CHOICES, blank=True)
     vehicle_make = models.ForeignKey(VehicleMake, on_delete=models.CASCADE, null=True)
     vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, null=True)
     parts_type = models.ForeignKey(PartType, on_delete=models.CASCADE)
-    condition = models.CharField(max_length=20, choices=CONDITION_TYPES)
+    condition = models.CharField(max_length=255, choices=CONDITION_TYPES)
     price = models.IntegerField()
     description = models.TextField()
     sold_by = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now_add=True, null=True)
     expires_at = models.DateTimeField(auto_now=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    status = models.CharField(max_length=255, choices=STATUS_CHOICES, default="draft")
     free_post = models.BooleanField(default=False)
     slug = models.SlugField(unique=True, blank=True)
 

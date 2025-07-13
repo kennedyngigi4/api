@@ -106,11 +106,11 @@ class VehicleUploadView(APIView):
         # listing.refresh_from_db()
 
         # Saving Images
-        images = request.FILES.getlist("images")
-        saved_images = []
-        for img in images:
-            listing_image = ListingImage.objects.create(listing=listing, image=img)
-            saved_images.append(ListingImageSerializer(listing_image).data)
+        # images = request.FILES.getlist("images")
+        # saved_images = []
+        # for img in images:
+        #     listing_image = ListingImage.objects.create(listing=listing, image=img)
+        #     saved_images.append(ListingImageSerializer(listing_image).data)
 
         if allowed:
             if reason == "subscription":
@@ -136,6 +136,19 @@ class VehicleUploadView(APIView):
             'payment_required': not allowed,
             'listing_id': listing.listing_id
         }, status=status.HTTP_201_CREATED)
+
+
+
+class ListingImageUploadView(APIView):
+    parser_classes = [ MultiPartParser, FormParser ]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ListingImageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -220,7 +233,7 @@ class UploadSparePartsView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
-        user = request.user
+        user = self.request.user
         serializer = SparePartSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -232,17 +245,6 @@ class UploadSparePartsView(APIView):
         status_value = "published" if allowed else "draft"
 
         spare = serializer.save(sold_by=user.uid, status=status_value)
-
-
-        # Saving images
-        images = request.FILES.getlist("images")
-        saved_images = []
-
-        for img in images:
-            spare_img = PartImage.objects.create(spare_part=spare, image=img)
-            saved_images.append(PartImageSerializer(spare_img).data)
-
-        
         if allowed:
             if reason == "subscription":
                 extra.uploads_used += 1
@@ -265,9 +267,21 @@ class UploadSparePartsView(APIView):
             'message': "Published successfully!" if allowed else "Saved as draft. Please subscribe to publish",
             'published': spare.status,
             'payment_required': not allowed,
-            'listing_id': spare.id
+            'id': spare.id
         }, status=status.HTTP_201_CREATED)
 
+
+class SpareImagesUploadView(APIView):
+    parser_classes = [ MultiPartParser, FormParser ]
+
+    def post(self, request, *args, **kwargs):
+        print(request.data)
+        serializer = PartImageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DealerSparesListView(generics.ListAPIView):
