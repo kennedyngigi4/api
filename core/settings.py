@@ -28,6 +28,7 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://kenautos.co.ke",
+    "https://www.kenautos.co.ke",
 ]
 # Application definition
 
@@ -211,9 +212,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User'
 
 
-
-
-
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -221,7 +219,17 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 
 
+EMAIL_BACKEND=os.getenv("EMAIL_BACKEND")
+EMAIL_HOST=os.getenv("EMAIL_HOST")
 
+EMAIL_PORT=int(os.getenv("EMAIL_PORT"))
+EMAIL_USE_TLS=os.getenv("EMAIL_USE_TLS") == "True"
+
+
+EMAIL_HOST_USER=os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD=os.getenv("EMAIL_HOST_PASSWORD")
+
+DEFAULT_FROM_EMAIL = f"{os.getenv('DEFAULT_FROM_NAME')} <{os.getenv('DEFAULT_FROM_EMAIL')}>"
 
 
 
