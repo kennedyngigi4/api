@@ -99,12 +99,12 @@ class ForgotPasswordAPIView(APIView):
             token = default_token_generator.make_token(user)
             reset_url = f"https://kenautos.co.ke/reset-password/{uid}/{token}/"
 
-            send_mail(
-                subject="Reset your password",
-                message=f"Click the link to reset your password: ",
-                from_email="hello@kenautos.co.ke",
-                recipient_list=[email]
-            )
+            # send_mail(
+            #     subject="Reset your password",
+            #     message=f"Click the link to reset your password: {reset_url}",
+            #     from_email="hello@kenautos.co.ke",
+            #     recipient_list=[email]
+            # )
 
             return Response({ "success": True, "message": "Password reset email sent."})
 
