@@ -103,14 +103,14 @@ class ForgotPasswordAPIView(APIView):
             send_mail(
                 subject="Reset your password",
                 message=f"Click the link to reset your password: {reset_url}",
-                from_email="support@kenautos.co.ke",
+                from_email="hello@kenautos.co.ke",
                 recipient_list=[email]
             )
 
-            return Response({ "message": "Password reset email sent."})
+            return Response({ "success": True, "message": "Password reset email sent."})
 
         except User.DoesNotExist:
-            return Response({ "error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({ "success": False, "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 
@@ -128,11 +128,11 @@ class ResetPasswordView(APIView):
             if default_token_generator.check_token(user, token):
                 user.set_password(new_password)
                 user.save()
-                return Response({ "message": "Password has been reset"})
+                return Response({ "success":True, "message": "Password has been reset"})
             else:
-                return Response({ "message": "Invalid or Expired token" }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({ "success":False, "message": "Invalid or Expired token" }, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
-            return Response({ "error": "Invalid request" }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({ "success":False, "message": "Invalid request" }, status=status.HTTP_400_BAD_REQUEST)
 
 
 
