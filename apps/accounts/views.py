@@ -96,13 +96,13 @@ class ForgotPasswordAPIView(APIView):
 
         try:
             user = User.objects.get(email=email)
-            uid = urlsafe_base64_encode(force_bytes(user.uid))
-            token = default_token_generator.make_token(user)
-            reset_url = f"https://kenautos.co.ke/reset-password/{uid}/{token}/"
+            # uid = urlsafe_base64_encode(force_bytes(user.uid))
+            # token = default_token_generator.make_token(user)
+            # reset_url = f"https://kenautos.co.ke/reset-password/{uid}/{token}/"
 
             send_mail(
                 subject="Reset your password",
-                message=f"Click the link to reset your password: {reset_url}",
+                message=f"Click the link to reset your password: ",
                 from_email="hello@kenautos.co.ke",
                 recipient_list=[email]
             )
