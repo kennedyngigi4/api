@@ -1,10 +1,17 @@
 import uuid
+import os
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+
+from django.core.files.base import ContentFile
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
 from datetime import timedelta
+from django.conf import settings 
 
+from apps.accounts.models import User, UserBusiness
 # Create your models here.
 
 class FreePostingMode(models.Model):
@@ -92,7 +99,7 @@ class Listing(models.Model):
     package_type = models.CharField(max_length=50, null=True, blank=True)
     was_free_post = models.BooleanField(default=False)
     status = models.CharField(max_length=60, choices=STATUS_CHOICES, default="draft")
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
 
 
     def get_price_drop(self):
@@ -127,6 +134,90 @@ class ListingImage(models.Model):
     image_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
     image = models.ImageField(upload_to=ListingImagePath, blank=True, null=True)
     listing = models.ForeignKey(Listing, related_name="images", on_delete=models.CASCADE, null=True)
+
+
+    def save(self, *args, **kwargs):
+        if not self.image:
+            super().save(*args, **kwargs)
+            return
+
+        # Save original image to get path (only if instance has no ID yet)
+        if not self.pk:
+            super().save(*args, **kwargs)
+
+        sold_by = self.listing.sold_by
+        user = User.objects.get(uid=sold_by)
+        business_name = UserBusiness.objects.get(user=user)
+
+        img = Image.open(self.image).convert("RGBA")
+
+        # watermark lines
+        line1 = "POSTED ON KENAUTOS"
+        line2 = business_name.name.upper()
+
+        # create transparent layer
+        watermark_layer = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(watermark_layer)
+
+        # load font
+        # Font sizes
+        font_size_line1 = max(int(min(img.size) * 0.05), 16) 
+        font_size_line2 = max(int(min(img.size) * 0.07), 24) 
+
+        font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
+        font1 = ImageFont.truetype(font_path, font_size_line1)
+        font2 = ImageFont.truetype(font_path, font_size_line2)
+
+        # Measure text size
+        bbox1 = draw.textbbox((0, 0), line1, font=font1)
+        bbox2 = draw.textbbox((0, 0), line2, font=font2)
+
+        # Compute width and height
+        text1_w, text1_h = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
+        text2_w, text2_h = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
+
+        # spacing between lines
+        total_height = text1_h + text2_h + 10
+        center_x = img.width // 2
+        start_y = (img.height - total_height ) // 2
+
+
+        # first line kenautos
+        draw.text(
+            (center_x - text1_w // 2, start_y),
+            line1,
+            font=font1,
+            fill=(255, 255, 255, 0),
+            stroke_width=2,
+            stroke_fill=(255, 255, 255, 100)
+        )
+
+
+        # second line
+        draw.text(
+            (center_x - text2_w // 2, start_y + text1_h + 25),
+            line2,
+            font=font2,
+            fill=(255, 255, 255, 0),
+            stroke_width=2,
+            stroke_fill=(255, 255, 255, 100)
+        )
+
+        # combine and save
+        watermarked = Image.alpha_composite(img, watermark_layer).convert("RGB")
+        buffer = BytesIO()
+        watermarked.save(buffer, format="WEBP", quality=90)
+        buffer.seek(0)
+
+        # Generate new filename
+        base, _ = os.path.splitext(os.path.basename(self.image.name))
+        file_name = base.replace(" ", "_") + ".webp"
+
+        # Assign modified image (do not trigger another save)
+        self.image.save(file_name, ContentFile(buffer.read()), save=False)
+
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.listing.listing_id}"
@@ -180,13 +271,14 @@ class SparePart(models.Model):
     condition = models.CharField(max_length=255, choices=CONDITION_TYPES)
     price = models.IntegerField()
     description = models.TextField()
+    
     sold_by = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now_add=True, null=True)
     expires_at = models.DateTimeField(auto_now=True, null=True)
     status = models.CharField(max_length=255, choices=STATUS_CHOICES, default="draft")
     free_post = models.BooleanField(default=False)
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
 
 
     def save(self, *args, **kwargs):
@@ -212,6 +304,91 @@ class PartImage(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
     image = models.ImageField(upload_to=PartImagePath, blank=True, null=True)
     spare_part = models.ForeignKey(SparePart, related_name="images", on_delete=models.CASCADE, null=True)
+
+
+    def save(self, *args, **kwargs):
+        if not self.image:
+            super().save(*args, **kwargs)
+            return
+
+        # Save original image to get path (only if instance has no ID yet)
+        if not self.pk:
+            super().save(*args, **kwargs)
+
+        sold_by = self.spare_part.sold_by
+        user = User.objects.get(uid=sold_by)
+        business_name = UserBusiness.objects.get(user=user)
+
+        img = Image.open(self.image).convert("RGBA")
+
+        # watermark lines
+        line1 = "POSTED ON KENAUTOS"
+        line2 = business_name.name.upper()
+
+        # create transparent layer
+        watermark_layer = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(watermark_layer)
+
+        # load font
+        # Font sizes
+        font_size_line1 = max(int(min(img.size) * 0.05), 14) 
+        font_size_line2 = max(int(min(img.size) * 0.07), 24) 
+
+        font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
+        font1 = ImageFont.truetype(font_path, font_size_line1)
+        font2 = ImageFont.truetype(font_path, font_size_line2)
+
+        # Measure text size
+        bbox1 = draw.textbbox((0, 0), line1, font=font1)
+        bbox2 = draw.textbbox((0, 0), line2, font=font2)
+
+        # Compute width and height
+        text1_w, text1_h = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
+        text2_w, text2_h = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
+
+        # spacing between lines
+        total_height = text1_h + text2_h + 10
+        center_x = img.width // 2
+        start_y = (img.height - total_height ) // 2
+
+
+        # first line kenautos
+        draw.text(
+            (center_x - text1_w // 2, start_y),
+            line1,
+            font=font1,
+            fill=(255, 255, 255, 0),
+            stroke_width=2,
+            stroke_fill=(255, 255, 255, 100)
+        )
+
+
+        # second line
+        draw.text(
+            (center_x - text2_w // 2, start_y + text1_h + 25),
+            line2,
+            font=font2,
+            fill=(255, 255, 255, 0),
+            stroke_width=2,
+            stroke_fill=(255, 255, 255, 100)
+        )
+
+        # combine and save
+        watermarked = Image.alpha_composite(img, watermark_layer).convert("RGB")
+        buffer = BytesIO()
+        watermarked.save(buffer, format="WEBP", quality=90)
+        buffer.seek(0)
+
+        # Generate new filename
+        base, _ = os.path.splitext(os.path.basename(self.image.name))
+        file_name = base.replace(" ", "_") + ".webp"
+
+        # Assign modified image (do not trigger another save)
+        self.image.save(file_name, ContentFile(buffer.read()), save=False)
+
+        super().save(*args, **kwargs)
+    
+
 
     def __str__(self):
         return f"{self.spare_part.id}"
