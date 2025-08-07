@@ -161,7 +161,7 @@ class ListingImage(models.Model):
 
         # load font
         # Font sizes
-        font_size_line1 = max(int(min(img.size) * 0.05), 14) 
+        font_size_line1 = max(int(min(img.size) * 0.05), 10) 
         font_size_line2 = max(int(min(img.size) * 0.07), 24) 
 
         font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
@@ -187,9 +187,9 @@ class ListingImage(models.Model):
             (center_x - text1_w // 2, start_y),
             line1,
             font=font1,
-            fill=(255, 255, 255, 0),
+            fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill=(255, 255, 255, 100)
+            stroke_fill=(255, 255, 255, 180)
         )
 
 
@@ -198,9 +198,9 @@ class ListingImage(models.Model):
             (center_x - text2_w // 2, start_y + text1_h + 25),
             line2,
             font=font2,
-            fill=(255, 255, 255, 0),
+            fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill=(255, 255, 255, 100)
+            stroke_fill=(255, 255, 255, 180)
         )
 
         # combine and save
@@ -331,7 +331,7 @@ class PartImage(models.Model):
 
         # load font
         # Font sizes
-        font_size_line1 = max(int(min(img.size) * 0.05), 14) 
+        font_size_line1 = max(int(min(img.size) * 0.05), 10) 
         font_size_line2 = max(int(min(img.size) * 0.07), 24) 
 
         font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
@@ -357,9 +357,9 @@ class PartImage(models.Model):
             (center_x - text1_w // 2, start_y),
             line1,
             font=font1,
-            fill=(255, 255, 255, 0),
+            fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill=(255, 255, 255, 100)
+            stroke_fill=(255, 255, 255, 180)
         )
 
 
@@ -368,9 +368,9 @@ class PartImage(models.Model):
             (center_x - text2_w // 2, start_y + text1_h + 25),
             line2,
             font=font2,
-            fill=(255, 255, 255, 0),
+            fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill=(255, 255, 255, 100)
+            stroke_fill=(255, 255, 255, 180)
         )
 
         # combine and save
