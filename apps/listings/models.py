@@ -161,7 +161,7 @@ class ListingImage(models.Model):
 
         # load font
         # Font sizes
-        font_size_line1 = max(int(min(img.size) * 0.05), 10) 
+        font_size_line1 = max(int(min(img.size) * 0.04), 24) 
         font_size_line2 = max(int(min(img.size) * 0.07), 24) 
 
         font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
@@ -331,7 +331,7 @@ class PartImage(models.Model):
 
         # load font
         # Font sizes
-        font_size_line1 = max(int(min(img.size) * 0.05), 10) 
+        font_size_line1 = max(int(min(img.size) * 0.04), 24) 
         font_size_line2 = max(int(min(img.size) * 0.07), 24) 
 
         font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
