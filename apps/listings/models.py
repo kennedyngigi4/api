@@ -212,12 +212,12 @@ class ListingImage(models.Model):
         # combine and save
         watermarked = Image.alpha_composite(img, watermark_layer).convert("RGB")
         buffer = BytesIO()
-        watermarked.save(buffer, format="WEBP", quality=90)
+        watermarked.save(buffer, format="JPEG", quality=85, optimize=True, progressive=True)
         buffer.seek(0)
 
         # Generate new filename
         base, _ = os.path.splitext(os.path.basename(self.image.name))
-        file_name = base.replace(" ", "_") + ".webp"
+        file_name = base.replace(" ", "_") + ".jpg"
 
         # Assign modified image (do not trigger another save)
         self.image.save(file_name, ContentFile(buffer.read()), save=False)
@@ -382,12 +382,12 @@ class PartImage(models.Model):
         # combine and save
         watermarked = Image.alpha_composite(img, watermark_layer).convert("RGB")
         buffer = BytesIO()
-        watermarked.save(buffer, format="WEBP", quality=90)
+        watermarked.save(buffer, format="JPEG", quality=85, optimize=True, progressive=True)
         buffer.seek(0)
 
         # Generate new filename
         base, _ = os.path.splitext(os.path.basename(self.image.name))
-        file_name = base.replace(" ", "_") + ".webp"
+        file_name = base.replace(" ", "_") + ".jpg"
 
         # Assign modified image (do not trigger another save)
         self.image.save(file_name, ContentFile(buffer.read()), save=False)
