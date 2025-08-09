@@ -195,7 +195,7 @@ class ListingImage(models.Model):
             font=font1,
             fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill = (255, 255, 255, 210)
+            stroke_fill = (255, 255, 255, 190)
         )
 
 
@@ -206,7 +206,7 @@ class ListingImage(models.Model):
             font=font2,
             fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill = (255, 255, 255, 210)
+            stroke_fill = (255, 255, 255, 190)
         )
 
         # combine and save
@@ -365,7 +365,7 @@ class PartImage(models.Model):
             font=font1,
             fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill = (255, 255, 255, 210)
+            stroke_fill = (255, 255, 255, 190)
         )
 
 
@@ -376,7 +376,7 @@ class PartImage(models.Model):
             font=font2,
             fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill = (255, 255, 255, 210)
+            stroke_fill = (255, 255, 255, 190)
         )
 
         # combine and save
