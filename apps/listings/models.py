@@ -39,6 +39,9 @@ class VehicleMake(models.Model):
     name = models.CharField(max_length=255, null=True)
     vehicle_type = models.CharField(max_length=10, choices=VEHICLE_TYPE_CHOICES, null=True)
 
+    class Meta:
+        ordering = [ 'name' ]
+
     def __str__(self):
         return self.name
 
@@ -47,8 +50,11 @@ class VehicleModel(models.Model):
     name = models.CharField(max_length=255, null=True)
     vehicle_make = models.ForeignKey(VehicleMake, on_delete=models.CASCADE, null=True)
 
+    class Meta:
+        ordering = [ 'name' ]
+
     def __str__(self):
-        return self.name
+        return f"{self.name} - {self.vehicle_make.name}"
     
 
 class Listing(models.Model):
