@@ -3,6 +3,7 @@ from django.shortcuts import render, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
@@ -14,7 +15,8 @@ from apps.listings.models import *
 from apps.listings.serializers import *
 
 
-
+# Cache for 1 week in seconds
+CACHE_TIMEOUT = 60 * 60 * 24 * 7
 
 class VehicleMakesView(generics.ListAPIView):
     serializer_class = VehicleMakeSerializer
@@ -22,8 +24,13 @@ class VehicleMakesView(generics.ListAPIView):
 
     def get_queryset(self):
         vehicle_type = "car" if self.kwargs["vehicle_type"] == "truck" else self.kwargs["vehicle_type"]
+        cache_key = f"vehicle_makes_{vehicle_type}"
 
-        return self.queryset.filter(vehicle_type=vehicle_type)
+        data = cache.get(cache_key)
+        if not data:
+            data = list(self.queryset.filter(vehicle_type=vehicle_type))
+            cache.set(cache_key, data, timeout=CACHE_TIMEOUT)
+        return data
 
 
 class VehicleModelsView(generics.ListAPIView):
@@ -32,7 +39,13 @@ class VehicleModelsView(generics.ListAPIView):
 
     def get_queryset(self):
         filtered_make = self.kwargs["make"]
-        return VehicleModel.objects.filter(vehicle_make=filtered_make)
+        cache_key = f"vehicle_models_{filtered_make}"
+
+        data = cache.get(cache_key)
+        if not data:
+            data = list(VehicleModel.objects.filter(vehicle_make=filtered_make).order_by("name"))
+            cache.set(cache_key, data, timeout=CACHE_TIMEOUT)
+            return data
     
 
 class HomepageView(APIView):
