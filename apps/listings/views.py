@@ -27,10 +27,11 @@ class VehicleMakesView(generics.ListAPIView):
         cache_key = f"vehicle_makes_{vehicle_type}"
 
         data = cache.get(cache_key)
-        if not data:
+        if data is None:
             data = list(self.queryset.filter(vehicle_type=vehicle_type))
             cache.set(cache_key, data, timeout=CACHE_TIMEOUT)
         return data
+
 
 
 class VehicleModelsView(generics.ListAPIView):
@@ -42,11 +43,12 @@ class VehicleModelsView(generics.ListAPIView):
         cache_key = f"vehicle_models_{filtered_make}"
 
         data = cache.get(cache_key)
-        if not data:
+        if data is None:
             data = list(VehicleModel.objects.filter(vehicle_make=filtered_make).order_by("name"))
             cache.set(cache_key, data, timeout=CACHE_TIMEOUT)
-            return data
+        return data
     
+
 
 class HomepageView(APIView):
     def get(self, request):
