@@ -40,12 +40,12 @@ class VehicleModelsView(generics.ListAPIView):
 
     def get_queryset(self):
         filtered_make = self.kwargs["make"]
-        cache_key = f"vehicle_models_{filtered_make}"
+        # cache_key = f"vehicle_models_{filtered_make}"
 
-        data = cache.get(cache_key)
-        if data is None:
-            data = list(VehicleModel.objects.filter(vehicle_make=filtered_make).order_by("name"))
-            cache.set(cache_key, data, timeout=CACHE_TIMEOUT)
+        # data = cache.get(cache_key)
+        # if data is None:
+        data = list(VehicleModel.objects.filter(vehicle_make=filtered_make).order_by("name"))
+            # cache.set(cache_key, data, timeout=CACHE_TIMEOUT)
         return data
     
 
