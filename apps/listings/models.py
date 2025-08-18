@@ -106,6 +106,7 @@ class Listing(models.Model):
     was_free_post = models.BooleanField(default=False)
     status = models.CharField(max_length=60, choices=STATUS_CHOICES, default="draft")
     slug = models.SlugField(max_length=255, unique=True, blank=True)
+    clicks = models.PositiveIntegerField(default=0)
 
 
     def get_price_drop(self):

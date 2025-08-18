@@ -4,6 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
+from django.db.models import F
 
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
@@ -114,7 +115,6 @@ class ListingPagination(PageNumberPagination):
 
 
 
-@method_decorator(cache_page(60), name="dispatch")
 class AllListings(ModelViewSet):
     queryset = Listing.objects.all()
     serializer_class = ListingSerializer
@@ -129,6 +129,23 @@ class AllListings(ModelViewSet):
         if vehicle_type:
             queryset = queryset.filter(vehicle_type=vehicle_type)
         return  queryset.order_by("-updated_at")
+    
+
+    @method_decorator(cache_page(60))  # cache only list
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+    
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        print("testing instance .....")
+        # increment clicks safely
+        Listing.objects.filter(pk=instance.pk).update(clicks=F("clicks") + 1)
+        instance.refresh_from_db()
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
 
 
 @method_decorator(cache_page(60), name="dispatch")
@@ -148,6 +165,19 @@ class ListingDetailsView(generics.RetrieveAPIView):
     serializer_class = ListingSerializer
     queryset = Listing.objects.filter(availability="Available", status="published")
     lookup_field = "slug"
+
+
+    def retrieve(self, request, *args, **kwargs):
+        print("testing .....")
+        instance = self.get_object()
+        print(instance)
+        Listing.objects.filter(pk=instance.pk).update(clicks=F("clicks") + 1)
+
+        # Refresh the instance so serializer has updated value
+        instance.refresh_from_db()
+        print(instance.clicks)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 
@@ -201,6 +231,8 @@ class CarHireBookingView(generics.CreateAPIView):
 class PartTypesView(generics.ListAPIView):
     serializer_class = PartTypeSerializer
     queryset = PartType.objects.all().order_by("name")
+
+
 
 
 

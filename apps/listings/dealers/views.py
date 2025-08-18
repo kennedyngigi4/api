@@ -158,7 +158,7 @@ class DealerVehiclesList(generics.ListAPIView):
     queryset = Listing.objects.all().prefetch_related("images").order_by("-created_at")
 
     def list(self, request, *args, **kwargs):
-        queryset = self.queryset.filter(sold_by=request.user.uid)
+        queryset = self.queryset.filter(sold_by=request.user.uid).exclude(availability="Sold")
         serializer = ListingSerializer(queryset, many=True)
         return Response(serializer.data)
 

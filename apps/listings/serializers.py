@@ -58,7 +58,7 @@ class ListingSerializer(serializers.ModelSerializer):
         fields = [
             "listing_id", "vehicle_type", "vehicle_make", "make", "vehicle_model", "model", "year_of_make", "fuel", "mileage", "drive", 
             "transmission", "engine_capacity", "price", "usage", "tradein", "financing", "description", "vehicle_type", "status", "slug",
-            "registration_number", "images", "availability", "dealer", "created_at", "updated_at", "expires_at", "price_drop", "price_dropped"
+            "registration_number", "images", "availability", "dealer", "created_at", "updated_at", "expires_at", "price_drop", "price_dropped", "clicks"
         ]
 
 
