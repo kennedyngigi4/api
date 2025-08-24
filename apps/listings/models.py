@@ -1,6 +1,6 @@
 import uuid
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from io import BytesIO
 
 from django.core.files.base import ContentFile
@@ -148,7 +148,7 @@ class ListingImage(models.Model):
             super().save(*args, **kwargs)
             return
 
-        # Save original image to get path (only if instance has no ID yet)
+        # Save original first if new instance
         if not self.pk:
             super().save(*args, **kwargs)
 
@@ -158,71 +158,74 @@ class ListingImage(models.Model):
 
         img = Image.open(self.image).convert("RGBA")
 
-        # watermark lines
+        # ---- RESIZE STEP (fit inside WhatsApp safe size) ----
+        MAX_SIZE = (1200, 1200)
+        img.thumbnail(MAX_SIZE, Image.LANCZOS)
+
+        # ---- BLURRED BACKGROUND ----
+        bg = img.copy().convert("RGB")
+        bg = bg.resize(MAX_SIZE, Image.LANCZOS)
+        bg = bg.filter(ImageFilter.GaussianBlur(30))  # strong blur
+
+        # Center paste resized image onto blurred background
+        canvas = bg.convert("RGBA")
+        x = (canvas.width - img.width) // 2
+        y = (canvas.height - img.height) // 2
+        canvas.paste(img, (x, y), img)
+
+        # ---- WATERMARK ----
         line1 = "POSTED ON KENAUTOS"
         line2 = business_name.name.upper()
 
-        # create transparent layer
-        watermark_layer = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        watermark_layer = Image.new("RGBA", canvas.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(watermark_layer)
 
-        # load font
-        # Font sizes
-        font_size_line1 = max(int(min(img.size) * 0.04), 24) 
-        font_size_line2 = max(int(min(img.size) * 0.07), 24) 
+        font_size_line1 = max(int(min(img.size) * 0.04), 24)
+        font_size_line2 = max(int(min(img.size) * 0.07), 24)
+        
 
         font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
         font1 = ImageFont.truetype(font_path, font_size_line1)
         font2 = ImageFont.truetype(font_path, font_size_line2)
 
-        # Measure text size
         bbox1 = draw.textbbox((0, 0), line1, font=font1)
         bbox2 = draw.textbbox((0, 0), line2, font=font2)
 
-        # Compute width and height
         text1_w, text1_h = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
         text2_w, text2_h = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
 
-        # spacing between lines
         total_height = text1_h + text2_h + 10
-        center_x = img.width // 2
-        start_y = (img.height - total_height ) // 2
+        center_x = canvas.width // 2
+        start_y = (canvas.height - total_height) // 2
 
-
-        # first line kenautos
         draw.text(
             (center_x - text1_w // 2, start_y),
             line1,
             font=font1,
             fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill = (255, 255, 255, 180)
+            stroke_fill=(255, 255, 255, 150)
         )
-
-
-        # second line
         draw.text(
             (center_x - text2_w // 2, start_y + text1_h + 25),
             line2,
             font=font2,
             fill=(0, 0, 0, 80),
             stroke_width=2,
-            stroke_fill = (255, 255, 255, 190)
+            stroke_fill=(255, 255, 255, 150)
         )
 
-        # combine and save
-        watermarked = Image.alpha_composite(img, watermark_layer).convert("RGB")
+        watermarked = Image.alpha_composite(canvas, watermark_layer).convert("RGB")
+
+        # ---- COMPRESS + SAVE ----
         buffer = BytesIO()
         watermarked.save(buffer, format="JPEG", quality=85, optimize=True, progressive=True)
         buffer.seek(0)
 
-        # Generate new filename
         base, _ = os.path.splitext(os.path.basename(self.image.name))
         file_name = base.replace(" ", "_") + ".jpg"
 
-        # Assign modified image (do not trigger another save)
         self.image.save(file_name, ContentFile(buffer.read()), save=False)
-
         super().save(*args, **kwargs)
 
 
