@@ -91,6 +91,7 @@ class VehicleUploadView(APIView):
 
     def post(self, request, *args, **kwargs):
         user = request.user
+        print(request.data)
         serializer = ListingSerializer(data=request.data)
 
         if not serializer.is_valid():

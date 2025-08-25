@@ -97,6 +97,9 @@ class Listing(models.Model):
     availability = models.CharField(max_length=50, choices=availability_list, default=availability_list[0][0], null=True, blank=True) #todo sold, available, reserved, 
     registration_number = models.CharField(max_length=6, null=True, blank=True)
     is_top = models.BooleanField(default=False)
+    location = models.CharField(max_length=255, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
 
     sold_by = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
