@@ -84,6 +84,7 @@ class ListingSerializer(serializers.ModelSerializer):
                 "phone": user.business.phone,
                 "joined_since": duration,
                 "image": image_url,
+                "is_verified": user.is_verified,
                 "banner": user.business.banner.url if user.business.banner else None,
             }
 
