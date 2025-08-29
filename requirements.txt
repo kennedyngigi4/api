@@ -48,7 +48,6 @@ python-crontab==3.2.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytweening==1.2.0
-pywhatkit==5.4
 redis==5.2.1
 requests==2.32.4
 rubicon-objc==0.5.2
