@@ -14,8 +14,8 @@ from rest_framework.viewsets import ModelViewSet
 
 from apps.listings.models import *
 from apps.listings.serializers import *
-
-
+from apps.marketing.models import *
+from apps.marketing.serializers import *
 # Cache for 1 week in seconds
 CACHE_TIMEOUT = 60 * 60 * 24 * 7
 
@@ -54,26 +54,31 @@ class VehicleModelsView(generics.ListAPIView):
 class HomepageView(APIView):
     def get(self, request):
         top_luxury = Listing.objects.filter(
-            is_top=True, status="published", availability="Available"
+            display_type="luxury", status="published", availability="Available"
         ).order_by("-updated_at")
 
         latest_cars = Listing.objects.filter(
-            is_top=False, status="published", availability="Available", vehicle_type="car"
-        ).order_by("-updated_at")[:12]
+            status="published", availability="Available", vehicle_type="car"
+        ).exclude(display_type="luxury").order_by("-updated_at")[:12]
 
-        latest_bikes = Listing.objects.filter(
-            is_top=False, status="published", availability="Available", vehicle_type="bike"
-        ).order_by("-updated_at")[:4]
+        latest_auctions = (
+            Listing.objects.filter(
+                display_type="auction",
+                status="published",
+                availability="Available",
+                auctions__status__in=["upcoming", "live"]
+            )
+            .order_by("-updated_at")
+            .distinct()[:4]
+        )
 
-        latest_trucks = Listing.objects.filter(
-            is_top=False, status="published", availability="Available", vehicle_type="truck"
-        ).order_by("-updated_at")[:4]
+        latest_blogs = Blog.objects.all().order_by("-uploaded_at")[:3]
 
         data = {
             "luxuries": ListingSerializer(top_luxury, many=True).data,
             "cars": ListingSerializer(latest_cars, many=True).data,
-            "bikes": ListingSerializer(latest_bikes, many=True).data,
-            "trucks": ListingSerializer(latest_trucks, many=True).data,
+            "auctions": ListingSerializer(latest_auctions, many=True).data,
+            "blogs": BlogSerializer(latest_blogs, many=True, context={"request": request}).data,
         }
 
         return Response(data)
@@ -235,6 +240,10 @@ class PartTypesView(generics.ListAPIView):
 
 
 
-
-
-
+class SubmitBidView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = BidSubmissionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({ "success": True, "message": "Bid submitted successfully."}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

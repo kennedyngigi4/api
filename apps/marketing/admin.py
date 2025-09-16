@@ -4,3 +4,5 @@ from apps.marketing.models import *
 
 
 admin.site.register(Notification)
+admin.site.register(BlogCategory)
+admin.site.register(Blog)

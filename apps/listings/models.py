@@ -79,6 +79,14 @@ class Listing(models.Model):
         ( "expired", "Expired", ),
     ]
 
+
+    LISTING_CHOICES = [
+        ("auction", "Auction"),
+        ("luxury", "luxury"),
+        ("featured", "Featured"),
+        ("latest", "Latest"),
+    ]
+
     listing_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
     vehicle_type = models.CharField(max_length=30, null=True, choices=VEHICLE_TYPE_CHOICES, blank=True)
     vehicle_make = models.ForeignKey(VehicleMake, on_delete=models.CASCADE, null=True)
@@ -96,7 +104,6 @@ class Listing(models.Model):
     description = models.TextField(null=True, blank=True)
     availability = models.CharField(max_length=50, choices=availability_list, default=availability_list[0][0], null=True, blank=True) #todo sold, available, reserved, 
     registration_number = models.CharField(max_length=6, null=True, blank=True)
-    is_top = models.BooleanField(default=False)
     location = models.CharField(max_length=255, null=True, blank=True)
     latitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
     longitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
@@ -110,6 +117,8 @@ class Listing(models.Model):
     status = models.CharField(max_length=60, choices=STATUS_CHOICES, default="draft")
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     clicks = models.PositiveIntegerField(default=0)
+
+    display_type = models.CharField(max_length=100, choices=LISTING_CHOICES, blank=True, null=True)
 
 
     def get_price_drop(self):
@@ -410,6 +419,14 @@ class PartImage(models.Model):
 
 
 class searchRequest(models.Model):
+
+    STATUS_CHOICES = [
+        ("new", "New", ),
+        ("ongoing", "Ongoing", ),
+        ("completed", "Completed", ),
+        ("cancelled", "Cancelled", ),
+    ]
+
     id  = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
     name = models.CharField(max_length=70, verbose_name=_("client name"))
     phone = models.CharField(max_length=15, verbose_name=_("client phone number"))
@@ -417,6 +434,8 @@ class searchRequest(models.Model):
     model = models.CharField(max_length=60, verbose_name=_("preferred model"))
     budget = models.CharField(max_length=60, verbose_name=_("budget"))
     notes = models.TextField(null=True, blank=True, verbose_name=_("extra specifications"))
+
+    status = models.CharField(max_length=60, choices=STATUS_CHOICES, default="new")
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -425,7 +444,15 @@ class searchRequest(models.Model):
 
 
 class CarHireBooking(models.Model):
+    
+    STATUS_CHOICES = [
+        ("upcoming", "Upcoming", ),
+        ("completed", "completed", ),
+        ("cancelled", "cancelled", ),
+    ]
+    
     id  = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
+    
     fullname = models.CharField(max_length=70, verbose_name=_("client name"))
     phone = models.CharField(max_length=15, verbose_name=_("client phone number"))
     occasion = models.CharField(max_length=50, verbose_name=_("occasion type"))
@@ -434,8 +461,53 @@ class CarHireBooking(models.Model):
     pickup_time = models.CharField(max_length=15, verbose_name=_("pickup time"))
     pickup_location = models.CharField(max_length=255, verbose_name=_("pickup location"))
     additionals = models.TextField(null=True, blank=True, verbose_name=_("extra specifications"))
+    
+    status = models.CharField(max_length=60, choices=STATUS_CHOICES, default="upcoming")
     created_at = models.DateTimeField(auto_now_add=True)
 
 
     def __str__(self):
         return f"{self.fullname} - {self.occasion}"
+
+
+class Auction(models.Model):
+    id  = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
+    vehicle = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="auctions")
+    starting_price = models.CharField(max_length=30)
+    reserve_price = models.CharField(max_length=30, null=True, blank=True)
+    buy_now_price = models.CharField(max_length=30, null=True, blank=True)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    status = models.CharField(
+        max_length=20,
+        choices=[("upcoming", "Upcoming"), ("live", "Live"), ("ended", "Ended"), ("sold", "Sold")],
+        default="upcoming"
+    )
+
+    updated_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_by = models.CharField(max_length=255, null=True)
+
+    def __str__(self):
+        return f"{self.vehicle.slug} - {self.status}"
+
+
+class Bidder(models.Model):
+    name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=15)
+
+    def __str__(self):
+        return self.name
+
+class Bid(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
+    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name="bids")
+    bidder = models.ForeignKey(Bidder, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-amount"]
+
+    def __str__(self):
+        return f"{self.bidder.name} - {self.amount} on {self.auction.vehicle}"
+

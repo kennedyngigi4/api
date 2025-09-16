@@ -16,4 +16,19 @@ def deactivate_expired_listings():
 
 
 
+@shared_task
+def update_auction_status():
+    now = timezone.now()
 
+    # set to live
+    Auction.objects.filter(
+        status="upcoming",
+        start_time__lte=now,
+        end_time__gt=now
+    ).update(status="live")
+
+    # Set to ended
+    Auction.objects.filter(
+        status="live",
+        end_time__lte=now
+    ).update(status="ended")

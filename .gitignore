@@ -8,5 +8,9 @@ env/
 media/
 superadmin/
 website/
+
+
+# Messaging
 pywhat/
+contacts.csv
 

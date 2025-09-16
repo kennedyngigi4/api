@@ -4,6 +4,8 @@ from apps.marketing.views import *
 
 urlpatterns = [
     path( "dealer_notifications", UserNotificationsView.as_view(), name="dealer_notifications", ),
+    path( "blogs/", AllBlogsView.as_view(), name="blogs", ),
+    path( "blog/<slug:slug>/", BlogDetailsView.as_view(), name="blog", ),
 ]
 
 

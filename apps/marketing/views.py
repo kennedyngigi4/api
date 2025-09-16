@@ -23,3 +23,20 @@ class UserNotificationsView(generics.ListAPIView):
         return super().get_queryset()
 
 
+
+class AllBlogsView(generics.ListAPIView):
+    serializer_class = BlogSerializer
+    queryset = Blog.objects.all().order_by("-uploaded_at")
+
+
+class BlogDetailsView(generics.RetrieveAPIView):
+    serializer_class = BlogSerializer
+    queryset = Blog.objects.all()
+    lookup_field = "slug"
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})  # ✅ pass request
+        return context
+
+

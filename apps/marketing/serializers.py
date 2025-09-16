@@ -9,3 +9,23 @@ class NotificationSerializer(serializers.ModelSerializer):
             "id", "title", "message", "category", "recipient", "created_at"
         ]
 
+
+
+class BlogSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Blog
+        fields = [
+            "id", "title", "slug", "category", "image", "exerpt", "content", "uploaded_by", "uploaded_at"
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        elif obj.image:
+            return obj.image.url
+        else:
+            return None
+

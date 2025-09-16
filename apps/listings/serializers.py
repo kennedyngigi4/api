@@ -35,6 +35,40 @@ class ListingImageSerializer(serializers.ModelSerializer):
         ]
 
 
+class AuctionSerializer(serializers.ModelSerializer):
+    current_price = serializers.SerializerMethodField()
+    highest_bid = serializers.SerializerMethodField()
+    countdown_to = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Auction
+        fields = [
+            "id", "vehicle", "starting_price", "reserve_price", "buy_now_price", "start_time", "end_time", "status",
+            "current_price", "highest_bid", "countdown_to"
+        ]
+        read_only_fields = [ "id", "updated_at"]
+
+    
+    def get_highest_bid(self, obj):
+        top_bid = obj.bids.order_by("-amount").first()
+        return str(top_bid.amount) if top_bid else None
+
+
+    def get_current_price(self, obj):
+        top_bid = obj.bids.order_by("-amount").first()
+        if top_bid:
+            return str(top_bid.amount)
+        return obj.starting_price
+    
+
+    def get_countdown_to(self, obj):
+        now = timezone.now()
+        if now < obj.start_time:
+            return obj.start_time
+        elif obj.start_time <= now < obj.end_time:
+            return obj.end_time
+        return None 
+
 
 class PriceHistorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,7 +78,6 @@ class PriceHistorySerializer(serializers.ModelSerializer):
         ]
 
 
-
 class ListingSerializer(serializers.ModelSerializer):
     images = ListingImageSerializer(many=True, required=False, read_only=True)
     make = serializers.SerializerMethodField()
@@ -52,15 +85,33 @@ class ListingSerializer(serializers.ModelSerializer):
     dealer = serializers.SerializerMethodField()
     price_drop = serializers.SerializerMethodField()
     price_dropped = serializers.SerializerMethodField()
+    auctions = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
         fields = [
             "listing_id", "vehicle_type", "vehicle_make", "make", "vehicle_model", "model", "year_of_make", "fuel", "mileage", "drive", 
             "transmission", "engine_capacity", "price", "usage", "tradein", "financing", "description", "vehicle_type", "status", "slug",
-            "registration_number", "images", "availability", "dealer", "created_at", "updated_at", "expires_at", "price_drop", "price_dropped", "clicks", "location",
+            "registration_number", "images", "availability", "dealer", "created_at", "updated_at", "expires_at", "price_drop", 
+            "price_dropped", "clicks", "location", "display_type", "auctions"
         ]
 
+    def get_auctions(self, obj):
+        auction = (
+            obj.auctions.filter(status__in=["live", "upcoming"])
+            .order_by(
+                models.Case(
+                    models.When(status="live", then=0),
+                    models.When(status="upcoming", then=1),
+                    default=2,
+                    output_field=models.IntegerField(),
+                ),
+                "-updated_at",
+            )
+            .first()
+        )
+        return AuctionSerializer(auction).data if auction else None
+                
 
     def get_make(self, obj):
         return obj.vehicle_make.name
@@ -219,4 +270,35 @@ class SparePartSerializer(serializers.ModelSerializer):
             return f"Joined {diff.days} day{'s' if diff.days > 1 else ''} ago"
         else:
             return f"Joined today"
+
+
+
+
+
+class BidSubmissionSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    phone = serializers.CharField()
+    auction = serializers.UUIDField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+    def create(self, validated_data):
+        # Step 1: get or create bidder
+        bidder, _ = Bidder.objects.get_or_create(
+            phone=validated_data["phone"],
+            defaults={"name": validated_data["name"]}
+        )
+
+        # Step 2: get auction
+        auction = Auction.objects.get(id=validated_data["auction"])
+
+        # Step 3: create bid
+        bid = Bid.objects.create(
+            auction=auction,
+            bidder=bidder,
+            amount=validated_data["amount"]
+        )
+
+        return bid
+
 

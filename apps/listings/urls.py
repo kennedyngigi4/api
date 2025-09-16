@@ -15,4 +15,5 @@ urlpatterns += [
     path( "search_request", searchRequestView.as_view(), name="search_request", ),
     path( "car_hire", CarHireBookingView.as_view(), name="car_hire", ),
     path( "spares_types/", PartTypesView.as_view(), name="spares_types", ),
+    path( "place-bid/", SubmitBidView.as_view(), name="place-bid", ),
 ]

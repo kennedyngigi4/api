@@ -18,7 +18,7 @@ SECRET_KEY=os.getenv("SECRET_KEY")
 DEBUG=os.getenv("DEBUG")
 
 ALLOWED_HOSTS = [
-    'api.kenautos.co.ke', 'localhost', '127.0.0.1', 'kenautos.co.ke'
+    'api.kenautos.co.ke', 'localhost', '127.0.0.1', 'kenautos.co.ke', 'aa271dea836c.ngrok-free.app'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -45,11 +45,14 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'django_celery_beat',
+    'tinymce',
 
     'apps.accounts.apps.AccountsConfig',
     'apps.listings.apps.ListingsConfig',
+    'apps.whatsappbot.apps.WhatsappbotConfig',
     'apps.payments.apps.PaymentsConfig',
     'apps.marketing.apps.MarketingConfig',
+    'apps.management.apps.ManagementConfig',
 ]
 
 
@@ -122,7 +125,14 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {},
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv("DB_ACCOUNTS"),
+        'USER': os.getenv("DB_USER"),
+        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'HOST': os.getenv("DB_HOST"),
+        'PORT': os.getenv("DB_PORT"),
+    },
     'accounts': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv("DB_ACCOUNTS"),
@@ -154,6 +164,22 @@ DATABASES = {
         'PASSWORD': os.getenv("DB_PASSWORD"),
         'HOST': os.getenv("DB_HOST"),
         'PORT': os.getenv("DB_PORT"),
+    },
+    'whatsappbot': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv("DB_WHATSAPPBOT"),
+        'USER': os.getenv("DB_USER"),
+        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'HOST': os.getenv("DB_HOST"),
+        'PORT': os.getenv("DB_PORT"),
+    },
+    'management': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv("DB_MANAGEMENT"),
+        'USER': os.getenv("DB_USER"),
+        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'HOST': os.getenv("DB_HOST"),
+        'PORT': os.getenv("DB_PORT"),
     }
 }
 
@@ -163,6 +189,8 @@ DATABASE_ROUTERS = [
     'routers.db_routers.Listings',
     'routers.db_routers.Payments',
     'routers.db_routers.Marketing',
+    'routers.db_routers.Whatsappbot',
+    'routers.db_routers.Management',
 ]
 
 # Password validation
@@ -189,7 +217,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Nairobi'
 
 USE_I18N = True
 
