@@ -29,6 +29,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://kenautos.co.ke",
     "https://www.kenautos.co.ke",
+    "https://gift.kenautos.co.ke",
 ]
 # Application definition
 
