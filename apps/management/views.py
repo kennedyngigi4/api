@@ -139,3 +139,12 @@ class CreateAuctionView(APIView):
 
 
 
+
+
+class BidsViews(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin, IsManager]
+
+    def get(self, request, *args, **kwargs):
+        queryset = Bid.objects.all()
+        serializer = BidsSerializer(queryset, many=True)
+        return Response(serializer.data)

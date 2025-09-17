@@ -136,3 +136,41 @@ class AuctionWriteSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "updated_at"]
 
+
+
+
+class BiddersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bidder
+        fields = [
+            "id", "name", "phone"
+        ]
+
+
+
+class BidsSerializer(serializers.ModelSerializer):
+    bidder = serializers.SerializerMethodField()
+    bidder_phone = serializers.SerializerMethodField()
+    auction = serializers.SerializerMethodField()
+    reserve_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Bid
+        fields = [
+            "id", "bidder", "bidder_phone", "auction", "amount", "timestamp", "reserve_price"
+        ]
+
+    def get_bidder(self, obj):
+        return obj.bidder.name
+    
+
+    def get_bidder_phone(self, obj):
+        return obj.bidder.phone
+
+    def get_auction(self, obj):
+        return f"{obj.auction.vehicle.year_of_make} {obj.auction.vehicle.vehicle_make.name} {obj.auction.vehicle.vehicle_model.name}"
+
+
+    def get_reserve_price(self, obj):
+        return obj.auction.reserve_price
+

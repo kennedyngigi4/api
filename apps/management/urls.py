@@ -11,5 +11,6 @@ urlpatterns = [
     path( "search-requests/", AdminCarSearchRequests.as_view(), name="search-requests", ),
     path( "vehicle-update/<str:pk>/", AdminVehicleUpdateView.as_view(), name="vehicle-update", ),
     path( "create-auction/", CreateAuctionView.as_view(), name="create-auction", ),
+    path( "bids/", BidsViews.as_view(), name="bids", ),
 ]
 
