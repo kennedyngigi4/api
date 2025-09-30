@@ -15,9 +15,10 @@ from apps.management.serializers import *
 
 
 class AdminDashboardView(APIView):
-    permission_classes = [IsAuthenticated, IsAdmin, IsManager]
+    permission_classes = [IsAuthenticated, IsManager]
 
     def get(self, request, *args, **kwargs):
+        print("response ........")
         users = User.objects.all().exclude(is_staff=True).count()
         listings = Listing.objects.all().count()
         bookings = CarHireBooking.objects.all().count()
@@ -30,6 +31,8 @@ class AdminDashboardView(APIView):
             "bookings": bookings,
             "requests": requests
         }
+
+        
 
         return Response(response)
     
