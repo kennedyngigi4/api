@@ -59,7 +59,7 @@ class HomepageView(APIView):
 
         latest_cars = Listing.objects.filter(
             status="published", availability="Available", vehicle_type="car"
-        ).exclude(display_type="luxury").order_by("-updated_at")[:12]
+        ).exclude(display_type__in=["luxury", "auction"]).order_by("-updated_at")[:12]
 
         latest_auctions = (
             Listing.objects.filter(
