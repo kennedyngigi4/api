@@ -15,6 +15,6 @@ admin.site.register(CarHireBooking)
 admin.site.register(SparePart)
 admin.site.register(PartType)
 admin.site.register(PartImage)
-# admin.site.register(Auction)
-# admin.site.register(Bid)
+admin.site.register(Auction)
+
 

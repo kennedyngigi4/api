@@ -18,7 +18,7 @@ SECRET_KEY=os.getenv("SECRET_KEY")
 DEBUG=os.getenv("DEBUG")
 
 ALLOWED_HOSTS = [
-    'api.kenautos.co.ke', 'gift.kenautos.co.ke', 'localhost', '127.0.0.1', 'kenautos.co.ke'
+    'api.kenautos.co.ke', 'gift.kenautos.co.ke', 'localhost', '127.0.0.1', 'kenautos.co.ke', 'aa271dea836c.ngrok-free.app'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -42,19 +42,21 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'corsheaders',
-    'django_filters',
-    'django_celery_beat',
-    'tinymce',
-
+    
     'apps.accounts.apps.AccountsConfig',
     'apps.listings.apps.ListingsConfig',
     'apps.whatsappbot.apps.WhatsappbotConfig',
     'apps.payments.apps.PaymentsConfig',
     'apps.marketing.apps.MarketingConfig',
     'apps.management.apps.ManagementConfig',
+
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+    'django_filters',
+    'django_celery_beat',
+    'tinymce',
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 
@@ -77,8 +79,8 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=70),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=365),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "ALGORITHM": "HS256",

@@ -63,6 +63,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Store accessToken in redis
         user = self.user
         access_token = data["access"]
+        refresh_token = data["refresh"]
         data["success"] = True
         data["id"] = self.user.uid
         data["name"] = self.user.name

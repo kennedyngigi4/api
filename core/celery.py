@@ -12,6 +12,7 @@ app.conf.beat_schedule = {
     "update-auction-status-every-minute": {
         "task": "apps.listings.tasks.update_auction_status",
         "schedule": 60.0, 
+        
     }
 }
 
