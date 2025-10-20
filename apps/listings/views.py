@@ -132,7 +132,7 @@ class AllListings(ModelViewSet):
         queryset = self.queryset.filter(availability="Available", status="published")
         vehicle_type = self.request.query_params.get('vehicle_type')
         if vehicle_type:
-            queryset = queryset.filter(vehicle_type=vehicle_type)
+            queryset = queryset.filter(vehicle_type=vehicle_type).exclude(display_type="auction")
         return  queryset.order_by("-updated_at")
     
 
@@ -247,3 +247,23 @@ class SubmitBidView(APIView):
             serializer.save()
             return Response({ "success": True, "message": "Bid submitted successfully."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
+class AuctionsListView(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+        auctions = Listing.objects.filter(
+                display_type="auction",
+                status="published",
+                availability="Available",
+                auctions__status__in=["upcoming", "live", "ended"]
+            ).order_by("-updated_at")
+        serializer = ListingSerializer(auctions, many=True)
+        return Response(serializer.data)
+
+
