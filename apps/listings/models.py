@@ -154,7 +154,12 @@ class ListingImage(models.Model):
     image_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
     image = models.ImageField(upload_to="listing_images/", blank=True, null=True)
     thumbnail = models.ImageField(upload_to="thumbnails/", blank=True, null=True)
-    listing = models.ForeignKey("Listing", related_name="images", on_delete=models.CASCADE, null=True)
+    listing = models.ForeignKey(
+        "Listing",
+        related_name="images",
+        on_delete=models.CASCADE,
+        null=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
@@ -162,18 +167,21 @@ class ListingImage(models.Model):
         ordering = ["created_at"]
 
     def save(self, *args, **kwargs):
-       is_new = self._state.adding
-       super().save(*args, **kwargs)
-
-       if is_new and self.image:
-           process_listing_image.delay(str(self.image_id))
+        is_new = self._state.adding or not self.thumbnail
+        super().save(*args, **kwargs)
+        if is_new and self.image and hasattr(settings, "CELERY_BROKER_URL"):
+            process_listing_image.delay(str(self.image_id))
 
     @property
     def og_image_url(self):
-        return self.thumbnail.url if self.thumbnail else self.image.url
+        if self.thumbnail:
+            return self.thumbnail.url
+        if self.image:
+            return self.image.url
+        return None
 
     def __str__(self):
-        return f"{self.listing.listing_id}"
+        return f"ListingImage ({self.image_id}) - {self.listing_id if self.listing else 'Unlinked'}"
     
 
 

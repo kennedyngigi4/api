@@ -28,11 +28,18 @@ class VehicleModelSerializer(serializers.ModelSerializer):
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
+    thumbnail = serializers.SerializerMethodField()
+
     class Meta:
         model = ListingImage
         fields = [
-            "image_id", "image", "listing"
+            "image_id", "image", "listing", "thumbnail"
         ]
+
+    def get_thumbnail(self, obj):
+        if obj.thumbnail:
+            return obj.thumbnail.url
+        return obj.image.url if obj.image else None
 
 
 class AuctionSerializer(serializers.ModelSerializer):

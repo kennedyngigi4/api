@@ -12,7 +12,8 @@ from apps.accounts.models import User, UserBusiness
 
 @shared_task
 def process_listing_image(image_id):
-    from apps.listings.models import ListingImage, Listing
+    from apps.listings.models import ListingImage
+    from apps.accounts.models import User, UserBusiness  # adjust if paths differ
 
     try:
         instance = ListingImage.objects.get(pk=image_id)
@@ -22,6 +23,7 @@ def process_listing_image(image_id):
     if not instance.image:
         return
 
+    # ---- Get business name ----
     try:
         sold_by = instance.listing.sold_by
         user = User.objects.get(uid=sold_by)
@@ -30,18 +32,20 @@ def process_listing_image(image_id):
     except Exception:
         business_name = "KENAUTOS VERIFIED"
 
+    # ---- Open image ----
     img = Image.open(instance.image).convert("RGBA")
 
     MASTER_SIZE = (1200, 800)
     THUMB_SIZE = (600, 400)
 
     # Determine if first image
-    first_exists = ListingImage.objects.filter(listing=instance.listing).exclude(pk=instance.pk).exists()
-    is_first = not first_exists
+    is_first = not ListingImage.objects.filter(
+        listing=instance.listing
+    ).exclude(pk=instance.pk).exists()
 
     img.thumbnail(MASTER_SIZE, Image.LANCZOS)
 
-    # Background: blur for others, plain white for first image
+    # ---- Prepare background ----
     if is_first:
         canvas = Image.new("RGBA", MASTER_SIZE, (255, 255, 255, 255))
         x = (MASTER_SIZE[0] - img.width) // 2
@@ -56,7 +60,7 @@ def process_listing_image(image_id):
         y = (canvas.height - img.height) // 2
         canvas.paste(img, (x, y), img)
 
-    # --- watermark ---
+    # ---- Add watermark ----
     line1 = "POSTED ON KENAUTOS"
     line2 = business_name
 
@@ -72,10 +76,10 @@ def process_listing_image(image_id):
 
     bbox1 = draw.textbbox((0, 0), line1, font=font1)
     bbox2 = draw.textbbox((0, 0), line2, font=font2)
-
     text1_w, text1_h = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
     text2_w, text2_h = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
-    total_height = text1_h + text2_h + 10
+
+    total_height = text1_h + text2_h + 25
     center_x = canvas.width // 2
     start_y = (canvas.height - total_height) // 2
 
@@ -92,29 +96,36 @@ def process_listing_image(image_id):
 
     final = Image.alpha_composite(canvas, watermark_layer).convert("RGB")
 
-    # Save processed image
+    # ---- Save processed main image ----
     buffer = BytesIO()
     final.save(buffer, format="JPEG", quality=88, optimize=True, progressive=True)
     buffer.seek(0)
+
     base, _ = os.path.splitext(os.path.basename(instance.image.name))
     file_name = base.replace(" ", "_") + ".jpg"
     instance.image.save(file_name, ContentFile(buffer.read()), save=False)
 
-    # Save thumbnail if first
-    if is_first:
-        thumb = final.copy()
-        thumb.thumbnail(THUMB_SIZE, Image.LANCZOS)
-        thumb_buffer = BytesIO()
-        thumb.save(thumb_buffer, format="JPEG", quality=85, optimize=True, progressive=True)
-        thumb_buffer.seek(0)
-        thumb_name = base.replace(" ", "_") + "_thumb.jpg"
-        instance.thumbnail.save(thumb_name, ContentFile(thumb_buffer.read()), save=False)
+    # ---- Generate and save thumbnail ----
+    thumb = final.copy()
+    thumb.thumbnail(THUMB_SIZE, Image.LANCZOS)
+    thumb_buffer = BytesIO()
+    thumb.save(thumb_buffer, format="JPEG", quality=85, optimize=True, progressive=True)
+    thumb_buffer.seek(0)
 
-        if hasattr(instance.listing, "thumbnail_image"):
-            instance.listing.thumbnail_image = instance.thumbnail
-            instance.listing.save(update_fields=["thumbnail_image"])
+    thumb_name = base.replace(" ", "_") + "_thumb.jpg"
+    instance.thumbnail.save(thumb_name, ContentFile(thumb_buffer.read()), save=False)
 
-    instance.save(update_fields=["image", "thumbnail"])
+    # ---- Update listing thumbnail if first ----
+    if is_first and hasattr(instance.listing, "thumbnail_image"):
+        instance.listing.thumbnail_image = instance.thumbnail
+        instance.listing.save(update_fields=["thumbnail_image"])
+
+    # ---- Final save + force DB sync ----
+    instance.save()
+    instance.refresh_from_db()
+
+    # Debug
+    print("✅ Thumbnail saved:", instance.thumbnail.url if instance.thumbnail else "❌ Missing")
 
 
 @shared_task
