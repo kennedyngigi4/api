@@ -12,6 +12,7 @@ from datetime import timedelta
 from django.conf import settings 
 
 from apps.accounts.models import User, UserBusiness
+from apps.listings.tasks import process_listing_image
 # Create your models here.
 
 class FreePostingMode(models.Model):
@@ -151,95 +152,25 @@ def ListingImagePath(instance, filename):
 
 class ListingImage(models.Model):
     image_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
-    image = models.ImageField(upload_to=ListingImagePath, blank=True, null=True)
-    listing = models.ForeignKey(Listing, related_name="images", on_delete=models.CASCADE, null=True)
+    image = models.ImageField(upload_to="listing_images/", blank=True, null=True)
+    thumbnail = models.ImageField(upload_to="thumbnails/", blank=True, null=True)
+    listing = models.ForeignKey("Listing", related_name="images", on_delete=models.CASCADE, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
+    class Meta:
+        ordering = ["created_at"]
 
     def save(self, *args, **kwargs):
-        if not self.image:
-            super().save(*args, **kwargs)
-            return
+       is_new = self._state.adding
+       super().save(*args, **kwargs)
 
-        # Save original first if new instance
-        if not self.pk:
-            super().save(*args, **kwargs)
+       if is_new and self.image:
+           process_listing_image.delay(str(self.image_id))
 
-        sold_by = self.listing.sold_by
-        user = User.objects.get(uid=sold_by)
-        business_name = UserBusiness.objects.get(user=user)
-
-        img = Image.open(self.image).convert("RGBA")
-
-        # ---- RESIZE STEP (fit inside WhatsApp safe size) ----
-        MAX_SIZE = (1200, 1200)
-        img.thumbnail(MAX_SIZE, Image.LANCZOS)
-
-        # ---- BLURRED BACKGROUND ----
-        bg = img.copy().convert("RGB")
-        bg = bg.resize(MAX_SIZE, Image.LANCZOS)
-        bg = bg.filter(ImageFilter.GaussianBlur(30))  # strong blur
-
-        # Center paste resized image onto blurred background
-        canvas = bg.convert("RGBA")
-        x = (canvas.width - img.width) // 2
-        y = (canvas.height - img.height) // 2
-        canvas.paste(img, (x, y), img)
-
-        # ---- WATERMARK ----
-        line1 = "POSTED ON KENAUTOS"
-        line2 = business_name.name.upper()
-
-        watermark_layer = Image.new("RGBA", canvas.size, (255, 255, 255, 0))
-        draw = ImageDraw.Draw(watermark_layer)
-
-        font_size_line1 = max(int(min(img.size) * 0.04), 24)
-        font_size_line2 = max(int(min(img.size) * 0.07), 24)
-        
-
-        font_path = os.path.join(settings.BASE_DIR, 'static/fonts/open_sans.ttf')
-        font1 = ImageFont.truetype(font_path, font_size_line1)
-        font2 = ImageFont.truetype(font_path, font_size_line2)
-
-        bbox1 = draw.textbbox((0, 0), line1, font=font1)
-        bbox2 = draw.textbbox((0, 0), line2, font=font2)
-
-        text1_w, text1_h = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
-        text2_w, text2_h = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
-
-        total_height = text1_h + text2_h + 10
-        center_x = canvas.width // 2
-        start_y = (canvas.height - total_height) // 2
-
-        draw.text(
-            (center_x - text1_w // 2, start_y),
-            line1,
-            font=font1,
-            fill=(0, 0, 0, 80),
-            stroke_width=2,
-            stroke_fill=(255, 255, 255, 150)
-        )
-        draw.text(
-            (center_x - text2_w // 2, start_y + text1_h + 25),
-            line2,
-            font=font2,
-            fill=(0, 0, 0, 80),
-            stroke_width=2,
-            stroke_fill=(255, 255, 255, 150)
-        )
-
-        watermarked = Image.alpha_composite(canvas, watermark_layer).convert("RGB")
-
-        # ---- COMPRESS + SAVE ----
-        buffer = BytesIO()
-        watermarked.save(buffer, format="JPEG", quality=85, optimize=True, progressive=True)
-        buffer.seek(0)
-
-        base, _ = os.path.splitext(os.path.basename(self.image.name))
-        file_name = base.replace(" ", "_") + ".jpg"
-
-        self.image.save(file_name, ContentFile(buffer.read()), save=False)
-        super().save(*args, **kwargs)
-
+    @property
+    def og_image_url(self):
+        return self.thumbnail.url if self.thumbnail else self.image.url
 
     def __str__(self):
         return f"{self.listing.listing_id}"
