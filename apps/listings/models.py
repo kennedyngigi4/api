@@ -171,6 +171,7 @@ class ListingImage(models.Model):
         super().save(*args, **kwargs)
         if is_new and self.image and hasattr(settings, "CELERY_BROKER_URL"):
             process_listing_image.delay(str(self.image_id))
+            
 
     @property
     def og_image_url(self):
