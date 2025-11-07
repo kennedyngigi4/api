@@ -136,6 +136,12 @@ class AllListings(ModelViewSet):
         return  queryset.order_by("-updated_at")
     
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+    
+
     @method_decorator(cache_page(60))  # cache only list
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)

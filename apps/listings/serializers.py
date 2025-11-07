@@ -37,9 +37,19 @@ class ListingImageSerializer(serializers.ModelSerializer):
         ]
 
     def get_thumbnail(self, obj):
+        request = self.context.get("request")
+        url = None
+
         if obj.thumbnail:
-            return obj.thumbnail.url
-        return obj.image.url if obj.image else None
+            url = obj.thumbnail.url
+        elif obj.image:
+            url = obj.image.url
+
+        if url and request:
+            return request.build_absolute_uri(url)
+
+        return url
+    
 
 
 class AuctionSerializer(serializers.ModelSerializer):
