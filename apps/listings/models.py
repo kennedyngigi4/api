@@ -89,10 +89,12 @@ class Listing(models.Model):
     ]
 
     listing_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4, unique=True)
+
     vehicle_type = models.CharField(max_length=30, null=True, choices=VEHICLE_TYPE_CHOICES, blank=True)
     vehicle_make = models.ForeignKey(VehicleMake, on_delete=models.CASCADE, null=True)
     vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, null=True)
     year_of_make = models.CharField(max_length=20, null=True, blank=True)
+
     fuel = models.CharField(max_length=40, null=True, blank=True)
     mileage = models.CharField(max_length=60, null=True, blank=True)
     drive = models.CharField(max_length=20, null=True, blank=True)
@@ -103,7 +105,8 @@ class Listing(models.Model):
     tradein = models.BooleanField(default=False)
     financing = models.BooleanField(default=False)
     description = models.TextField(null=True, blank=True)
-    availability = models.CharField(max_length=50, choices=availability_list, default=availability_list[0][0], null=True, blank=True) #todo sold, available, reserved, 
+    
+    availability = models.CharField(max_length=50, choices=availability_list, default=availability_list[0][0], null=True, blank=True)
     registration_number = models.CharField(max_length=6, null=True, blank=True)
     location = models.CharField(max_length=255, null=True, blank=True)
     latitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
@@ -113,6 +116,7 @@ class Listing(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
     expires_at = models.DateTimeField(blank=True, null=True)
+    
     package_type = models.CharField(max_length=50, null=True, blank=True)
     was_free_post = models.BooleanField(default=False)
     status = models.CharField(max_length=60, choices=STATUS_CHOICES, default="draft")
@@ -142,6 +146,7 @@ class Listing(models.Model):
 
     def __str__(self):
         return f"{self.year_of_make} {self.vehicle_make} {self.vehicle_model}"
+
 
 
 def ListingImagePath(instance, filename):

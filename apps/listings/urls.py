@@ -3,8 +3,9 @@ from apps.listings.views import *
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
-router.register(r"all", AllListings, basename="all",),
-router.register(r"spares", SparePartsView, basename="spares", ),
+router.register(r"all", AllListingsViewSet, basename="all"),
+router.register(r"auctions", AuctionListingsViewSet, basename="auctions"),
+router.register(r"spares", SparePartsView, basename="spares"),
 urlpatterns = router.urls
 
 urlpatterns += [
@@ -16,5 +17,5 @@ urlpatterns += [
     path( "car_hire", CarHireBookingView.as_view(), name="car_hire", ),
     path( "spares_types/", PartTypesView.as_view(), name="spares_types", ),
     path( "place-bid/", SubmitBidView.as_view(), name="place-bid", ),
-    path( "auctions/", AuctionsListView.as_view(), name="auctions", ),
+    
 ]

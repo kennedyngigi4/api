@@ -4,7 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
-from django.db.models import F
+from django.db.models import F, Prefetch
 
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
@@ -12,10 +12,13 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from core.utils.helpers.vehicle_pagination import VehiclePagination
 from apps.listings.models import *
 from apps.listings.serializers import *
 from apps.marketing.models import *
 from apps.marketing.serializers import *
+from apps.listings.services.services import ListingService
+
 # Cache for 1 week in seconds
 CACHE_TIMEOUT = 60 * 60 * 24 * 7
 
@@ -52,36 +55,71 @@ class VehicleModelsView(generics.ListAPIView):
 
 
 class HomepageView(APIView):
-    def get(self, request):
-        top_luxury = Listing.objects.filter(
-            display_type="luxury", status="published", availability="Available"
-        ).order_by("-updated_at")
 
-        latest_cars = Listing.objects.filter(
-            status="published", availability="Available", vehicle_type="car"
-        ).exclude(display_type__in=["luxury", "auction"]).order_by("-updated_at")[:12]
+    
+    def get(self, request):
+
+        listing_base_queryset = Listing.objects.select_related(
+            "vehicle_make", "vehicle_model"
+        ).prefetch_related(
+            Prefetch("images", queryset=ListingImage.objects.only("thumbnail"))
+        ).filter(
+            status="published",
+            availability="Available"
+        ).only(
+            "listing_id",
+            "slug",
+            "vehicle_make__name",
+            "vehicle_model__name",
+            "year_of_make",
+            "fuel",
+            "transmission",
+            "engine_capacity",
+            "price",
+            "display_type",
+            "updated_at",
+        )
+
+
+        top_luxury = (
+            listing_base_queryset
+            .filter(display_type="luxury")
+            .order_by("-updated_at")[:8]
+        )
+
+
+        latest_cars = (
+            listing_base_queryset
+            .filter(vehicle_type="car")
+            .exclude(display_type__in=["luxury", "auction"])
+            .order_by("-updated_at")[:12]
+        )
 
         latest_auctions = (
-            Listing.objects.filter(
+            listing_base_queryset
+            .filter(
                 display_type="auction",
-                status="published",
-                availability="Available",
                 auctions__status__in=["upcoming", "live"]
             )
             .order_by("-updated_at")
             .distinct()[:4]
         )
 
-        latest_blogs = Blog.objects.all().order_by("-uploaded_at")[:3]
+        latest_blogs = Blog.objects.only(
+            "id", "slug", "title", "uploaded_at", "image", "exerpt"
+        ).order_by("-uploaded_at")[:3]
+
+        serializer_context = {"request": request}
 
         data = {
-            "luxuries": ListingSerializer(top_luxury, many=True).data,
-            "cars": ListingSerializer(latest_cars, many=True).data,
-            "auctions": ListingSerializer(latest_auctions, many=True).data,
-            "blogs": BlogSerializer(latest_blogs, many=True, context={"request": request}).data,
+            "luxuries": VehicleListSerializer(top_luxury, many=True, context=serializer_context).data,
+            "cars": VehicleListSerializer(latest_cars, many=True, context=serializer_context).data,
+            "auctions": VehicleListSerializer(latest_auctions, many=True, context=serializer_context).data,
+            "blogs": BlogSerializer(latest_blogs, many=True, context=serializer_context).data,
         }
 
         return Response(data)
+    
 
 
 class ListingFilter(django_filters.FilterSet):
@@ -99,20 +137,6 @@ class ListingFilter(django_filters.FilterSet):
         fields = [ 'make', 'model', 'year_of_make', 'min_price', 'max_price', 'vehicle_type' ]
 
 
-class SparesFilter(django_filters.FilterSet):
-    min_price = django_filters.NumberFilter(field_name="price", lookup_expr="gte")
-    max_price = django_filters.NumberFilter(field_name="price", lookup_expr="lte")
-    title = django_filters.CharFilter(field_name="title", lookup_expr="icontains" )
-    make = django_filters.CharFilter(field_name="vehicle_make__name", lookup_expr="icontains" )
-    model = django_filters.CharFilter(field_name="vehicle_model__name", lookup_expr="icontains" )
-    parts_type = django_filters.CharFilter(field_name="parts_type__name", lookup_expr="icontains" )
-    vehicle_type = django_filters.CharFilter(field_name="vehicle_type", lookup_expr="icontains" )
-
-    class Meta:
-        model = SparePart
-        fields = [ 'title', 'make', 'model', 'parts_type', 'vehicle_type', 'min_price', 'max_price' ]
-
-
 class ListingPagination(PageNumberPagination):
     page_size = 23
     page_size_query_param = "page_size"
@@ -120,56 +144,47 @@ class ListingPagination(PageNumberPagination):
 
 
 
-class AllListings(ModelViewSet):
-    queryset = Listing.objects.all()
-    serializer_class = ListingSerializer
-    pagination_class = ListingPagination
+class AllListingsViewSet(ModelViewSet):
+    serializer_class = VehicleListSerializer
+    pagination_class = VehiclePagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = ListingFilter
     lookup_field = "slug"
 
     def get_queryset(self):
-        queryset = self.queryset.filter(availability="Available", status="published")
-        vehicle_type = self.request.query_params.get('vehicle_type')
-        if vehicle_type:
-            queryset = queryset.filter(vehicle_type=vehicle_type).exclude(display_type="auction")
-        return  queryset.order_by("-updated_at")
+        return Listing.objects.using("listings").select_related(
+            "vehicle_make", "vehicle_model"
+        ).prefetch_related(
+            Prefetch("images", queryset=ListingImage.objects.only("thumbnail"))
+        ).filter(
+            availability="Available",
+            status="published"
+        ).exclude(
+            display_type="auction"
+        ).order_by("-updated_at")
     
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return VehicleDetailsSerializer
+        return VehicleListSerializer
+
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["request"] = self.request
+
+        if self.action == "retrieve":
+            listing = self.get_object()
+
+            sellers = ListingService.user_data_by_ids([str(listing.sold_by)])
+
+            context["sellers_map"] = {
+                str(u.uid): u for u in sellers
+            }
+
         return context
-    
-
-    @method_decorator(cache_page(60))  # cache only list
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-    
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        print("testing instance .....")
-        # increment clicks safely
-        Listing.objects.filter(pk=instance.pk).update(clicks=F("clicks") + 1)
-        instance.refresh_from_db()
-
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
 
 
-
-@method_decorator(cache_page(60), name="dispatch")
-class SparePartsView(ModelViewSet):
-    queryset = SparePart.objects.all().order_by("-created_at")
-    serializer_class = SparePartSerializer
-    pagination_class = ListingPagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = SparesFilter
-
-    def get_queryset(self):
-        queryset = self.queryset.filter(status="published")
-        return queryset.order_by("-updated_at")
 
 
 class ListingDetailsView(generics.RetrieveAPIView):
@@ -189,6 +204,87 @@ class ListingDetailsView(generics.RetrieveAPIView):
         print(instance.clicks)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+        
+
+
+class AuctionListingsViewSet(ModelViewSet):
+    lookup_field = "slug"
+    pagination_class = VehiclePagination
+
+    def get_queryset(self):
+        return (
+            Listing.objects.using("listings")
+            .select_related("vehicle_make", "vehicle_model")
+            .prefetch_related(
+                Prefetch("images", queryset=ListingImage.objects.only("image")),
+                Prefetch(
+                    "auctions",
+                    queryset=Auction.objects.filter(
+                        status__in=["upcoming", "live"]
+                    ).prefetch_related(
+                        "bids__bidder" 
+                    )
+                )
+            )
+            .filter(
+                display_type="auction",
+                status="published",
+                availability="Available",
+            )
+            .distinct()
+        )
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return VehicleDetailsSerializer
+        return VehicleListSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+
+        if self.action == "retrieve":
+            listing = self.get_object()
+            sellers = ListingService.user_data_by_ids([str(listing.sold_by)])
+            context["sellers_map"] = {
+                str(u.uid): u for u in sellers
+            }
+
+        return context
+
+
+
+
+
+
+
+class SparesFilter(django_filters.FilterSet):
+    min_price = django_filters.NumberFilter(field_name="price", lookup_expr="gte")
+    max_price = django_filters.NumberFilter(field_name="price", lookup_expr="lte")
+    title = django_filters.CharFilter(field_name="title", lookup_expr="icontains" )
+    make = django_filters.CharFilter(field_name="vehicle_make__name", lookup_expr="icontains" )
+    model = django_filters.CharFilter(field_name="vehicle_model__name", lookup_expr="icontains" )
+    parts_type = django_filters.CharFilter(field_name="parts_type__name", lookup_expr="icontains" )
+    vehicle_type = django_filters.CharFilter(field_name="vehicle_type", lookup_expr="icontains" )
+
+    class Meta:
+        model = SparePart
+        fields = [ 'title', 'make', 'model', 'parts_type', 'vehicle_type', 'min_price', 'max_price' ]
+
+
+@method_decorator(cache_page(60), name="dispatch")
+class SparePartsView(ModelViewSet):
+    queryset = SparePart.objects.all().order_by("-created_at")
+    serializer_class = SparePartSerializer
+    pagination_class = ListingPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = SparesFilter
+
+    def get_queryset(self):
+        queryset = self.queryset.filter(status="published")
+        return queryset.order_by("-updated_at")
+
+
+
 
 
 
@@ -261,15 +357,6 @@ class SubmitBidView(APIView):
 
 
 
-class AuctionsListView(generics.ListAPIView):
-    def get(self, request, *args, **kwargs):
-        auctions = Listing.objects.filter(
-                display_type="auction",
-                status="published",
-                availability="Available",
-                auctions__status__in=["upcoming", "live", "ended"]
-            ).order_by("-updated_at")
-        serializer = ListingSerializer(auctions, many=True)
-        return Response(serializer.data)
+
 
 

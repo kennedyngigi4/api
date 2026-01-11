@@ -13,6 +13,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class BlogSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
+    category = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
         model = Blog

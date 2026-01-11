@@ -1,6 +1,9 @@
-from django.db import connections
+from django.db.models import Prefetch 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.utils.timesince import timesince
+from django.utils.timezone import now
+
 
 from rest_framework import serializers
 from apps.listings.models import *
@@ -33,22 +36,8 @@ class ListingImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ListingImage
         fields = [
-            "image_id", "image", "listing", "thumbnail"
+            "image_id", "image", "listing"
         ]
-
-    def get_thumbnail(self, obj):
-        request = self.context.get("request")
-        url = None
-
-        if obj.thumbnail:
-            url = obj.thumbnail.url
-        elif obj.image:
-            url = obj.image.url
-
-        if url and request:
-            return request.build_absolute_uri(url)
-
-        return url
     
 
 
@@ -93,6 +82,182 @@ class PriceHistorySerializer(serializers.ModelSerializer):
         fields = [
             "id", "listing", "price", "updated_at"
         ]
+
+
+
+class AuctionPriceSerializer(serializers.Serializer):
+    starting_price = serializers.CharField()
+    reserve_price = serializers.CharField(allow_null=True)
+    buy_now_price = serializers.CharField(allow_null=True)
+    start_time = serializers.DateTimeField()
+    end_time = serializers.DateTimeField()
+    status = serializers.CharField()
+
+
+class TopBidSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    timestamp = serializers.DateTimeField()
+
+
+class AuctionWithTopBidSerializer(serializers.Serializer):
+    starting_price = serializers.CharField()
+    reserve_price = serializers.CharField(allow_null=True)
+    buy_now_price = serializers.CharField(allow_null=True)
+    start_time = serializers.DateTimeField()
+    end_time = serializers.DateTimeField()
+    status = serializers.CharField()
+    top_bid = serializers.SerializerMethodField()
+
+    def get_top_bid(self, obj):
+        bid = obj.bids.select_related("bidder").first()
+        if not bid:
+            return None
+        return TopBidSerializer(bid).data
+
+
+
+class VehicleListSerializer(serializers.ModelSerializer):
+    thumbnail = serializers.SerializerMethodField()
+    vehicle_make = serializers.CharField(source="vehicle_make.name", read_only=True)
+    vehicle_model = serializers.CharField(source="vehicle_model.name", read_only=True)
+    auction = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Listing
+        fields = [
+            "listing_id", "slug", "vehicle_make", "vehicle_model", "year_of_make", "fuel", 
+            "transmission", "engine_capacity", "price", "thumbnail", "display_type", "auction"
+        ]
+
+
+    def get_thumbnail(self, obj):
+        request = self.context.get("request")
+        first_image  = obj.images.first()
+
+        if not first_image or not first_image.thumbnail:
+            return None
+        
+        if request:
+            return  request.build_absolute_uri(first_image.thumbnail.url)
+
+        return first_image.thumbnail.url
+    
+
+    def get_auction(self, obj):
+        if obj.display_type != "auction":
+            return None
+
+        auction = (
+            obj.auctions
+            .filter(status__in=["upcoming", "live"])
+            .first()
+        )
+
+        if not auction:
+            return None
+
+        return AuctionWithTopBidSerializer(auction).data
+
+
+
+    
+
+class SellerBusinessSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    email = serializers.EmailField()
+    phone = serializers.CharField()
+    image = serializers.CharField(allow_null=True)
+    banner = serializers.CharField(allow_null=True)
+
+
+class VehicleDetailsSerializer(serializers.ModelSerializer):
+    vehicle_make = serializers.CharField(source="vehicle_make.name", read_only=True)
+    vehicle_model = serializers.CharField(source="vehicle_model.name", read_only=True)
+    images = serializers.SerializerMethodField()
+    seller = serializers.SerializerMethodField()
+    auction = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Listing
+        fields = [
+            "listing_id", "slug", "vehicle_make", "vehicle_model", "year_of_make", "fuel", 
+            "transmission", "engine_capacity", "price", "display_type",
+
+            "images", "mileage", "drive", "usage", "tradein", "financing", "description", "vehicle_type", "status",
+            "registration_number", "availability", "clicks", "location", "seller", "auction"
+        ]
+
+    def get_images(self, obj):
+        request = self.context.get("request")
+        return [
+            request.build_absolute_uri(img.image.url)
+            for img in obj.images.all()
+        ]
+
+
+    def get_seller(self, obj):
+        sellers_map = self.context.get("sellers_map", {})
+        user = sellers_map.get(str(obj.sold_by))
+
+        if not user or not hasattr(user, "business"):
+            return None
+
+        business = user.business
+        request = self.context.get("request")
+
+        return {
+            "id": business.id,
+
+            # Business info
+            "name": business.name,
+            "email": business.email,
+            "phone": business.phone,
+            "image": (
+                request.build_absolute_uri(business.image.url)
+                if business.image else None
+            ),
+            "banner": (
+                request.build_absolute_uri(business.banner.url)
+                if business.banner else None
+            ),
+
+            # User info
+            "is_verified": user.is_verified,
+            "date_joined": user.date_joined,
+            "joined_since": (
+                "today"
+                if timesince(user.date_joined, now()) == "0 minutes"
+                else f"{timesince(user.date_joined, now())} ago"
+            ),
+        }
+
+
+    def get_auction(self, obj):
+        if obj.display_type != "auction":
+            return None
+
+        auction = (
+            obj.auctions
+            .filter(status__in=["upcoming", "live"])
+            .first()
+        )
+
+        if not auction:
+            return None
+
+        return AuctionWithTopBidSerializer(auction).data
+
+
+
+
+
+
+
+
+
+
+
 
 
 class ListingSerializer(serializers.ModelSerializer):
@@ -159,6 +324,7 @@ class ListingSerializer(serializers.ModelSerializer):
         except User.DoesNotExist:
             return None
         
+
     def get_joined_duration(self, date_joined):
         now = timezone.now()
         diff = relativedelta(now, date_joined)

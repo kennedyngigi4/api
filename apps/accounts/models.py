@@ -76,16 +76,22 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     uid = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
+
     email = models.EmailField(null=True, unique=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     phone = models.CharField(max_length=60, null=True, unique=True)
     gender = models.CharField(max_length=100, null=True, blank=True)
+
     image = models.ImageField(upload_to=profileImagePath, null=True, blank=True)
+
     is_partner = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+
     date_joined = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(null=True, blank=True)
+
     free_limit = models.IntegerField(default=0)
+    
     is_active = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
@@ -107,17 +113,23 @@ def businessImagesPath(instance, filename):
     uid = str(instance.user.uid).replace("-",""),
     return f"users/{uid}/{filename}"
 
+
 class UserBusiness(models.Model):
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
+    
     user = models.OneToOneField(User, related_name="business", on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     email = models.CharField(max_length=65, null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
+    
     website = models.URLField(max_length=355, null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
     latlng = models.CharField(max_length=255, null=True, blank=True)
+    
     image = models.ImageField(upload_to=businessImagesPath, null=True, blank=True)
     banner = models.ImageField(upload_to=businessImagesPath, null=True, blank=True)
+    
     facebook = models.CharField(max_length=255, null=True, blank=True)
     instagram = models.CharField(max_length=255, null=True, blank=True)
     tiktok = models.CharField(max_length=255, null=True, blank=True)
