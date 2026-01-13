@@ -1,5 +1,5 @@
 from django.urls import path
-from apps.listings.views import *
+from apps.listings.views.views import *
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()

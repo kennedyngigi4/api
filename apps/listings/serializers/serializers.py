@@ -31,12 +31,12 @@ class VehicleModelSerializer(serializers.ModelSerializer):
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
-    thumbnail = serializers.SerializerMethodField()
+    
 
     class Meta:
         model = ListingImage
         fields = [
-            "image_id", "image", "listing"
+            "image_id", "image", "listing", "thumbnail"
         ]
     
 

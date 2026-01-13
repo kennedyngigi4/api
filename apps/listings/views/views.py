@@ -14,7 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from core.utils.helpers.vehicle_pagination import VehiclePagination
 from apps.listings.models import *
-from apps.listings.serializers import *
+from apps.listings.serializers.serializers import *
 from apps.marketing.models import *
 from apps.marketing.serializers import *
 from apps.listings.services.services import ListingService

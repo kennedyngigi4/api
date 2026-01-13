@@ -11,7 +11,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from apps.accounts.models import *
 from apps.accounts.permissions import *
 from apps.listings.models import *
-from apps.listings.serializers import *
+from apps.listings.serializers.serializers import *
+from apps.listings.serializers.dealer_serializers import *
 # Create your views here.
 
 
@@ -155,21 +156,33 @@ class ListingImageUploadView(APIView):
 
 class DealerVehiclesList(generics.ListAPIView):
     permission_classes = [ IsAuthenticated]
-    serializer_class = ListingSerializer
+    serializer_class = DealerVehicleListSerializer
     queryset = Listing.objects.all().prefetch_related("images").order_by("-created_at")
 
     def list(self, request, *args, **kwargs):
         queryset = self.queryset.filter(sold_by=request.user.uid).exclude(availability="Sold")
-        serializer = ListingSerializer(queryset, many=True)
+        serializer = DealerVehicleListSerializer(queryset, many=True, context={"request": request})
         return Response(serializer.data)
+
 
 
 class VehicleDetailsView(generics.RetrieveUpdateAPIView):
     permission_classes = [ IsAuthenticated]
-    serializer_class = ListingSerializer
+    serializer_class = DealerVehicleDetailsSerializer
     queryset = Listing.objects.all().prefetch_related("images")
     lookup_field = "slug"
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial
+        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response({ "success": True, "message": "Vehicle updated."}, status=status.HTTP_200_OK)
 
 
 class VehicleDeleteView(generics.RetrieveDestroyAPIView):
